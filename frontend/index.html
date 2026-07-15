@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Frontend</title>
+  <style>
+    table { border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 6px 10px; font-size: 14px; }
+    th { background: #eee; }
+    section { margin-top: 20px; }
+    h4 { margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+
+  <input type="file" id="files" multiple>
+  <button type="button" onclick="upload()">Upload</button>
+
+  <section>
+    <h4>Uploaded Files</h4>
+    <div id="uploadedFiles">No files uploaded yet.</div>
+  </section>
+
+  <section>
+    <h4>Detected Primary Keys</h4>
+    <div id="primaryKeys"></div>
+  </section>
+
+  <section>
+    <h4>Merge Log</h4>
+    <div id="mergeLog"></div>
+  </section>
+
+  <section>
+    <h4>Merged Table</h4>
+    <div id="tableContainer"></div>
+  </section>
+
+  <section>
+    <a id="downloadLink" href="http://127.0.0.1:8000/download" style="display:none;" download>
+      <button type="button">Download merged.csv</button>
+    </a>
+  </section>
+
+  <!-- Save to Database button -->
+  <section>
+    <button type="button" onclick="saveToDatabase()">Save to Database</button>
+    <p id="saveStatus"></p>
+  </section>
+
+  <script>
+    const BASE = "http://127.0.0.1:8000";
+    let lastMergedData = [];   // holds the most recent merged table, used by Save button
+
+    async function upload() {
+      const files = document.getElementById("files").files;
+      if (files.length === 0) {
+        alert("Please choose at least one file.");
+        return;
+      }
+
+      const formData = new FormData();
+      for (const f of files) formData.append("files", f);
+
+      const res = await fetch(`${BASE}/upload`, {
+        method: "POST",
+        body: formData
+      });
+
+      const result = await res.json();
+
+      if (result.error) {
+        document.getElementById("tableContainer").innerHTML = `<p style="color:red;">${result.error}</p>`;
+        return;
+      }
+
+      document.getElementById("uploadedFiles").innerHTML =
+        result.uploaded_files.map(f => `✓ ${f}`).join("<br>");
+
+      document.getElementById("primaryKeys").innerHTML =
+        Object.entries(result.primary_keys)
+          .map(([file, key]) => `${file} → <b>${key}</b>`)
+          .join("<br>");
+
+      document.getElementById("mergeLog").innerHTML =
+        result.merge_log.length
+          ? result.merge_log.join("<br>")
+          : "No merges performed.";
+
+      renderTable(result.data);
+      lastMergedData = result.data;   // store for Save to Database
+
+      document.getElementById("downloadLink").style.display = "inline-block";
+    }
+
+    function renderTable(rows) {
+      const container = document.getElementById("tableContainer");
+
+      if (!rows.length) {
+        container.innerText = "No data to display.";
+        return;
+      }
+
+      const columns = Object.keys(rows[0]);
+      let html = "<table><thead><tr>";
+      columns.forEach(col => html += `<th>${col}</th>`);
+      html += "</tr></thead><tbody>";
+
+      rows.forEach(row => {
+        html += "<tr>";
+        columns.forEach(col => html += `<td>${row[col] ?? ""}</td>`);
+        html += "</tr>";
+      });
+
+      html += "</tbody></table>";
+      container.innerHTML = html;
+    }
+
+    async function saveToDatabase() {
+      if (lastMergedData.length === 0) {
+        alert("No merged data to save yet. Please upload and merge files first.");
+        return;
+      }
+
+      const res = await fetch(`${BASE}/save-to-db`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: lastMergedData })
+      });
+
+      const result = await res.json();
+
+      if (result.error) {
+        document.getElementById("saveStatus").innerHTML = `<span style="color:red;">${result.error}</span>`;
+      } else {
+        document.getElementById("saveStatus").innerHTML =
+          `<span style="color:green;">Saved ${result.rows} rows to database.</span>`;
+      }
+    }
+  </script>
+</body>
+</html>

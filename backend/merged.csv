@@ -1,0 +1,13 @@
+name,fee status,email,class,phone,address,city,parent_name,admission_id,gender
+aman singh,Paid,aman@gmail.com,9B,9876500003,Hill View,Delhi,Mahesh Singh,ADM103,Male
+anjali meena,Paid,anjali@gmail.com,8A,9876500006,Sector 5,Alwar,Ramlal Meena,ADM106,Female
+arjun rao,Pending,arjun@gmail.com,7B,9876500012,Airport Rd,Bharatpur,Vijay Rao,ADM112,Male
+karan patel,Pending,karan@gmail.com,8B,9876500009,Model Town,Bikaner,Rohit Patel,ADM109,Male
+mohit gupta,Pending,mohit@gmail.com,9A,9876500005,Shastri Nagar,Ajmer,Anil Gupta,ADM105,Male
+neha yadav,Paid,neha@gmail.com,9C,9876500010,Old City,Baran,Dinesh Yadav,ADM110,Female
+pooja sharma,Paid,pooja@gmail.com,10C,9876500011,Green Park,Tonk,Naresh Sharma,ADM111,Female
+priya verma,Pending,priya@gmail.com,10A,9876500002,44 MG Road,Kota,Suresh Verma,ADM102,Female
+rahul sharma,Paid,rahul@gmail.com,10A,9876500001,21 Park St,Jaipur,Rakesh Sharma,ADM101,Male
+riya kapoor,Paid,riya@gmail.com,7A,9876500008,Station Rd,Sikar,Sunil Kapoor,ADM108,Female
+sneha jain,Paid,sneha@gmail.com,8C,9876500004,Lake Road,Udaipur,Rajesh Jain,ADM104,Female
+vikram joshi,Pending,vikram@gmail.com,10B,9876500007,Civil Lines,Jodhpur,Kailash Joshi,ADM107,Male
