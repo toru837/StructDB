@@ -1,5 +1,6 @@
 # From File Chaos to Database Power
 
+
 This project is a tiny rebellion against the old-school file-system mindset.
 
 In DBMS, we learn this big idea:
@@ -27,6 +28,10 @@ Instead of treating uploaded files like just "bags of rows," this app:
 So your unstructured files become something queryable, storable, and much more powerful.
 
 ---
+
+## Evolution of the Project
+
+This project started as a manual **Pandas-based data merging notebook** to understand how multiple Excel files could be cleaned and merged. Once the workflow was validated, the same logic was automated into a **FastAPI web application** with file upload, intelligent merging, CSV export, and SQLite storage.
 
 ## Architecture in One Glance
 
@@ -121,13 +126,15 @@ The merged data is:
 smart-table-generator/
 │
 ├── backend/
-│   ├── main.py              # FastAPI server
-│   ├── uploads/             # Uploaded files
-│   ├── merged.csv           # Generated output
+│   ├── main.py              # FastAPI backend
+│   ├── uploads/             # Uploaded input files
+│   ├── merged.csv           # Generated CSV output
 │   └── data12.db            # SQLite database
 │
 ├── frontend/
-│   └── index.html
+│   └── index.html           # User interface
+│
+├── New_toy_learning.ipynb   # Initial Pandas-based implementation
 │
 └── README.md
 ```
