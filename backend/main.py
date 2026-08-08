@@ -6,13 +6,13 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 import pandas as pd
 import re
-import os
-from io import BytesIO
-from sqlalchemy import create_engine  # for integrating database
+import os 
+from io import BytesIO 
+from sqlalchemy import create_engine  # for integrating database 
 
 app = FastAPI()
 # creates data.db if not exist
-engine = create_engine("sqlite:///data.db")
+engine = create_engine("sqlite:///data01.db")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 UPLOAD_DIR = "uploads"
@@ -37,7 +37,7 @@ COLUMN_MAP = {
     "mobile": "phone",
     "phone number": "phone",
 
-    "admission id": "admission_id",   # matches real header "Admission ID"
+    "admission id": "admission_id", 
 
     "parent name": "parent_name",
 }
@@ -45,33 +45,30 @@ COLUMN_MAP = {
 # Priority order used to pick the primary key for each table
 KEY_PRIORITY = ["admission_id", "phone", "name"]
 
-
+#Rename messy column to our standard names using COLUMN_MAP
 def standardize_columns(df):
-    """Rename messy column headers to our standard names using COLUMN_MAP."""
     new_cols = {}
     for col in df.columns:
         key = col.strip().lower()
         new_cols[col] = COLUMN_MAP.get(key, key)
     return df.rename(columns=new_cols)
 
-
+#trimming spaces, lowercase text fields, validate phone numbers.
 def clean_data(df):
-    """Basic cleaning: trim spaces, lowercase text fields, validate phone numbers."""
+    
     if "name" in df.columns:
         df["name"] = df["name"].str.strip().str.lower()
-        # collapse multiple spaces into a single space
         df["name"] = df["name"].apply(lambda x: re.sub(r"\s+", " ", x) if pd.notna(x) else x)
     if "email" in df.columns:
         df["email"] = df["email"].str.strip().str.lower()
     if "phone" in df.columns:
         df["phone"] = df["phone"].str.strip()
-        # invalid phone (not exactly 10 digits) becomes null
         df.loc[df["phone"].str.len() != 10, "phone"] = None
     return df
 
 
 def detect_primary_key(df):
-    """Pick the first column (in priority order) that is fully unique and non-null."""
+    """Pick the first column (in priority order) that is fully unique and non-null.""" #docstring
     for col in KEY_PRIORITY:
         if col in df.columns and df[col].notna().all() and df[col].nunique() == len(df):
             return col
@@ -81,8 +78,7 @@ def detect_primary_key(df):
 def find_best_common_key(df1, df2):
     """
     Find the strongest shared column between two tables.
-    Among common columns, prefer the one with the FEWEST missing values
-    in either table, not just the first match in priority order.
+    take column with less missing values, in order of KEY_PRIORITY.
     """
     candidates = [col for col in KEY_PRIORITY if col in df1.columns and col in df2.columns]
 
@@ -103,12 +99,13 @@ def find_best_common_key(df1, df2):
 
 def merge_fill_missing(left, right, key):
     """
+    Outer join 
     Merge two tables on `key`, but only FILL missing values.
     Existing valid values in `left` are never overwritten.
+
     """
     merged = pd.merge(left, right, on=key, how="outer", suffixes=("", "_new"))
 
-    # for every duplicate "_new" column, fill blanks in the original, then drop it
     for col in list(merged.columns):
         if col.endswith("_new"):
             original = col.replace("_new", "")
@@ -121,24 +118,24 @@ def merge_fill_missing(left, right, key):
 @app.post("/upload")
 async def upload_files(files: list[UploadFile] = File(...)):
     tables = []          # list of {"filename": ..., "df": ...}
-    primary_keys = {}    # filename -> detected key (or None)
+    primary_keys = {}    # filename -> detected key (or None)  
 
-    # Step 1 + 2 + 3: read, standardize, clean each file
+# Step 1 + 2 + 3: read, standardize, clean each file
     for file in files:
         content = await file.read()
-
-        # ---- CHECK 1: empty file ----
+#read the uploaded file and check if its empty, wrong formated or blank then do not accept it..
+# ---- CHECK 1: empty file ----   not needed 
         if len(content) == 0:
             return JSONResponse(
                 status_code=400,
                 content={"error": f"'{file.filename}' is empty. Please upload a valid file."}
             )
 
-        # save a copy to backend/uploads/ as required
+# save a copy to backend/uploads/
         with open(os.path.join(UPLOAD_DIR, file.filename), "wb") as f:
             f.write(content)
 
-        # ---- CHECK 2: wrong file type ----
+# ---- CHECK 2: wrong file type ----
         if file.filename.endswith(".csv"):
             df = pd.read_csv(BytesIO(content), dtype=str)
         elif file.filename.endswith((".xlsx", ".xls")):
@@ -149,7 +146,7 @@ async def upload_files(files: list[UploadFile] = File(...)):
                 content={"error": f"'{file.filename}' is not a supported file type. Use .csv or .xlsx."}
             )
 
-        # ---- CHECK 3: blank spreadsheet (no rows/columns) ----
+# ---- CHECK 3: blank spreadsheet (no rows/columns) ----
         if df.empty or len(df.columns) == 0:
             return JSONResponse(
                 status_code=400,
@@ -163,7 +160,7 @@ async def upload_files(files: list[UploadFile] = File(...)):
 
     # Step 4: detect primary key for EACH table individually
     for t in tables:
-        key = detect_primary_key(t["df"])
+        key = detect_primary_key(t["df"]) 
         primary_keys[t["filename"]] = key if key else "none detected"
 
     # Step 5: merge tables one by one, logging how each merge happened
@@ -206,7 +203,7 @@ async def upload_files(files: list[UploadFile] = File(...)):
 
 # ---- Save merged data to database ----
 class SaveRequest(BaseModel):
-    data: List[Dict[str, Any]]   # the merged table rows, sent from frontend
+    data: List[Dict[str, Any]]   
 
 
 @app.post("/save-to-db")
@@ -216,9 +213,7 @@ def save_to_db(request: SaveRequest):
 
         if df.empty:
             return JSONResponse(status_code=400, content={"error": "No data to save."})
-
-        # writes the DataFrame into a table called "records"
-        # if_exists="replace" -> overwrites old saved data with this new merge
+#overwrite
         df.to_sql("records", con=engine, if_exists="replace", index=False)
 
         return {"status": "saved", "rows": len(df)}
